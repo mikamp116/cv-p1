@@ -83,3 +83,19 @@ class Match:
 train = load2('train')
 orb = cv2.ORB_create(nfeatures=10,nlevels=30)
 
+"""Usaremos una estructura de datos tipo FLANN para almacenar los descriptores"""
+
+FLANN_INDEX_LSH = 6
+index_params= dict(algorithm = FLANN_INDEX_LSH, table_number = 6,key_size = 3,multi_probe_level = 1)
+search_params = dict(checks=-1) # Maximum leafs to visit when searching for neighbours.
+flann = cv2.FlannBasedMatcher(index_params,search_params)
+
+"""Almacenamos la información de los puntos de interés del entrenamiento en match_table"""
+match_table = []
+# Bucle de entrenamiento
+for image in train:
+    kps, des = orb.detectAndCompute(image,None)
+    image_det = cv2.drawKeypoints(image, kps, None, color=(55,0,255), flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    image_match = [Match(calculateModule(k.pt),calculateAngleToCentre(k.pt),k.size, k.angle) for k in kps]
+    match_table.append(image_match)
+    flann.add([des])
