@@ -10,17 +10,11 @@ import math
 print("Python version: " + sys.version)
 print("OpenCV version: " + cv2.__version__)
 
-"""Todas las imágenes de entreamiento (almacenadas en el directorio train) tienen el mismo tamaño y el frontal
-está cuadrado, por lo que el centro de todas las imágenes, y también el centro del frontal, se encontrará en el
-punto(225, 110), almacenado en la variable centre"""
-
-centre = (225, 110)
-
 """
 Carga de imágenes.
 Todas las imágenes de entramiento están en el mismo directorio y tienen un nombre y una extensión similar. Almacenamos
-las partes comunes de la ruta para que el proceso de carga sea más fácil. En el método *load()* se cargarán todas las
-imágenes de entrenamiento, mientras que en el *softLoad()* se cargan únicamente 6 imágenes preseleccionadas
+las partes comunes de la ruta para que el proceso de carga sea más fácil. En el método load() se cargarán todas las
+imágenes de entrenamiento, mientras que en el softLoad() se cargan únicamente 6 imágenes preseleccionadas
 """
 
 def load():
@@ -49,4 +43,18 @@ def softLoad():
     train.append(cv2.imread('train/frontal_26.jpg', 0))
     return train
 
-train = load2('train')
+"""Todas las imágenes de entreamiento (almacenadas en el directorio train) tienen el mismo tamaño y el frontal
+está cuadrado, por lo que el centro de todas las imágenes, y también el centro del frontal, se encontrará en el
+punto(225, 110), almacenado en la variable centre"""
+
+centre = (225, 110)
+
+"""Definimos unos métodos para calcular el módulo del vector que une un punto p con el centro de la imágen y para
+calcular el ángulo que forma un punto p con el centro respecto del eje X en el sentido de las agujas del reloj"""
+
+def calculateModule(p):
+    return np.sqrt((centre[0] - p[0]) ** 2 + (centre[1] - p[1]) ** 2)
+
+def calculateAngleToCentre(p):
+    return (math.atan2((p[1] - centre[1]), (centre[0] - p[0])) * 180 / math.pi) % 360
+
