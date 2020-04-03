@@ -81,7 +81,7 @@ class Match:
         return self.des_angle
 
 train = load2('train')
-orb = cv2.ORB_create(nfeatures=10,nlevels=30)
+orb = cv2.ORB_create(nfeatures=100,nlevels=30)
 
 """Usaremos una estructura de datos tipo FLANN para almacenar los descriptores"""
 
@@ -95,7 +95,38 @@ match_table = []
 # Bucle de entrenamiento
 for image in train:
     kps, des = orb.detectAndCompute(image,None)
-    image_det = cv2.drawKeypoints(image, kps, None, color=(55,0,255), flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    image_det = cv2.drawKeypoints(image, kps, None, color=(255,0,255), flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     image_match = [Match(calculateModule(k.pt),calculateAngleToCentre(k.pt),k.size, k.angle) for k in kps]
     match_table.append(image_match)
     flann.add([des])
+
+test = cv2.imread('test/test32.jpg')
+# plt.imshow(test)
+test_kps, test_des = orb.detectAndCompute(test, None)
+sh = cv2.drawKeypoints(test, test_kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+plt.imshow(sh)
+plt.show()
+
+results = flann.knnMatch(test_des, k=3)
+
+matriz_votacion = np.zeros((int(test.shape[0]/10),int(test.shape[1]/10)),dtype=np.uint8)
+
+for r in results:
+    for m in r:
+        match = match_table[m.imgIdx][m.trainIdx]
+        m_test = test_kps[m.queryIdx]
+        trns = (match.getScale() / m_test.size ) * match.getModule()
+        trns2 = (m_test.size / match.getScale()) * match.getModule()
+        angle = match.getKpAngle() + match.getDesAngle() - m_test.angle
+        x = int((m_test.pt[0] + (trns2 * math.cos(angle))) / 10)
+        y = int((m_test.pt[1] - (trns2 * math.sin(angle))) / 10)
+        if x>0 and x<matriz_votacion.shape[1] and y>0 and y<matriz_votacion.shape[0]:
+            matriz_votacion[y,x] += 1
+
+
+# Get the indices of maximum element in numpy array
+z = np.unravel_index(np.argmax(matriz_votacion, axis=None), matriz_votacion.shape)
+
+cv2.circle(test, (int(z[0]*10), int(z[1]*10)), 15, (255,0,0), thickness=10, lineType=8, shift=0)
+plt.imshow(test)
+plt.show()
