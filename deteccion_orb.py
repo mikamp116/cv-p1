@@ -58,3 +58,28 @@ def calculateModule(p):
 def calculateAngleToCentre(p):
     return (math.atan2((p[1] - centre[1]), (centre[0] - p[0])) * 180 / math.pi) % 360
 
+"""Más tarde va a ser necesario almacenar información sobre los puntos de interés (key points o kp), por lo que
+definimos una clase para ello"""
+
+class Match:
+    def __init__(self, module, angle_to_centre, scale, angle):
+        self.module = module
+        self.kp_angle = angle_to_centre
+        self.scale = scale
+        self.des_angle = angle
+
+    def getModule(self):
+        return self.module
+
+    def getKpAngle(self):
+        return self.kp_angle
+
+    def getScale(self):
+        return self.scale
+
+    def getDesAngle(self):
+        return self.des_angle
+
+train = load2('train')
+orb = cv2.ORB_create(nfeatures=10,nlevels=30)
+
