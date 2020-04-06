@@ -100,7 +100,7 @@ for image in train:
     match_table.append(image_match)
     flann.add([des])
 
-test = cv2.imread('test/test32.jpg')
+test = cv2.imread('test/test17.jpg')
 # plt.imshow(test)
 test_kps, test_des = orb.detectAndCompute(test, None)
 sh = cv2.drawKeypoints(test, test_kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
@@ -126,7 +126,9 @@ for r in results:
 
 # Get the indices of maximum element in numpy array
 z = np.unravel_index(np.argmax(matriz_votacion, axis=None), matriz_votacion.shape)
+q = (int(z[1]*10), int(z[0]*10))
 
-cv2.circle(test, (int(z[0]*10), int(z[1]*10)), 15, (255,0,0), thickness=10, lineType=8, shift=0)
+# cv2.circle(test, (int(z[0]*10), int(z[1]*10)), 15, (255,0,0), thickness=10, lineType=8, shift=0)
+cv2.circle(test, q, 15, (255,0,0), thickness=10, lineType=8, shift=0)
 plt.imshow(test)
 plt.show()
