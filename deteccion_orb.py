@@ -112,7 +112,7 @@ test_kps, test_des = orb.detectAndCompute(test, None)
 
 results = flann.knnMatch(test_des, k=3)
 
-matriz_votacion = np.zeros((int(test.shape[0]/10),int(test.shape[1]/10)),dtype=np.uint8)
+matriz_votacion = np.zeros((int(test.shape[0]/10),int(test.shape[1]/10)),dtype=np.float32)
 
 for r in results:
     for m in r:
@@ -126,6 +126,12 @@ for r in results:
         if 0 < x < matriz_votacion.shape[1] and 0 < y < matriz_votacion.shape[0]:
             matriz_votacion[y,x] += 1
 
+sigma = 2
+ksize = 6*sigma+1
+gaussian_kernel_y = cv2.getGaussianKernel(ksize, sigma)
+gaussian_kernel_x = gaussian_kernel_y.T
+gaussian_kernel = gaussian_kernel_y  * gaussian_kernel_x
+matriz_filtrada = cv2.filter2D(matriz_votacion, -1, gaussian_kernel)
 
 # Get the indices of maximum element in numpy array
 z = np.unravel_index(np.argmax(matriz_votacion, axis=None), matriz_votacion.shape)
