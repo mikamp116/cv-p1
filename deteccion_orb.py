@@ -7,8 +7,8 @@ import sys
 import math
 import time
 
-print("Python version: " + sys.version)
-print("OpenCV version: " + cv2.__version__)
+assert ((sys.version).startswith('3.7')), "No se esta usando la version 3.7 de Python. Version en uso: " + sys.version
+assert ((cv2.__version__).startswith('4.2')), "No se esta usando la version 4.2 de OpenCV. Version en uso: " + cv2.__version__
 
 """
 Carga de imágenes.
@@ -123,6 +123,16 @@ def detect(images, detector, match_table, flann, KNN_MATCHES, GAUSSIAN_KERNEL_SI
 
         results = flann.knnMatch(des, k=KNN_MATCHES)
 
+        """good = []
+        for r in results:
+            local = []
+            for i in range(len(r)-1):
+                m = r[i]
+                n = r[i+1]
+                if m.distance < 0.95 * n.distance:
+                    local.append(m)
+            good.append(local)"""
+
         matriz_votacion = np.zeros((int(test_image.shape[0] / 10), int(test_image.shape[1] / 10)), dtype=np.float32)
 
         for r in results:
@@ -174,10 +184,10 @@ def main(NUM_KEYPOINTS, SCALE_FACTOR, PYRAMID_LEVELS, KNN_MATCHES, GAUSSIAN_KERN
 
 
 if __name__ == "__main__":
-    NUM_KEYPOINTS = 100
+    NUM_KEYPOINTS = 500
     SCALE_FACTOR = 1.3
     PYRAMID_LEVELS = 4
-    KNN_MATCHES = 3
+    KNN_MATCHES = 6
     GAUSSIAN_KERNEL_SIGMA = 2
     DEBUG = 1
 
