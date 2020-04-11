@@ -1,4 +1,3 @@
-"""Importamos las librerías a utilizar y comprobamos que usamos las versiones correctas de Python y OpenCV"""
 import os
 import cv2
 from matplotlib import pyplot as plt
@@ -7,22 +6,12 @@ import sys
 import math
 import time
 
-assert ((sys.version).startswith('3.7')), "No se esta usando la version 3.7 de Python. Version en uso: " + sys.version
-assert ((cv2.__version__).startswith('4.2')), "No se esta usando la version 4.2 de OpenCV. Version en uso: " + cv2.__version__
-
-"""
-Carga de imágenes.
-Todas las imágenes de entramiento están en el mismo directorio y tienen un nombre y una extensión similar. Almacenamos
-las partes comunes de la ruta para que el proceso de carga sea más fácil. En el método load() se cargarán todas las
-imágenes de entrenamiento, mientras que en el softLoad() se cargan únicamente 6 imágenes preseleccionadas
-"""
-
-
-def load2():
-    return [cv2.imread('train/frontal_' + str(i) + '.jpg', 0) for i in range(1, 49)]
+assert (sys.version.startswith('3.7')), "No se esta usando la version 3.7 de Python. Version en uso: " + sys.version
+assert (cv2.__version__.startswith('4.2')), "No se esta usando la version 4.2 de OpenCV. Version en uso: " + cv2.__version__
 
 
 def ordenar(lst):
+    """Recibe una lista y la devuelve ordenada"""
     lst.sort(key=len)
     ret = lst[0:10]
     ret.sort()
@@ -32,37 +21,39 @@ def ordenar(lst):
 
 
 def load(directory='train'):
+    """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el"""
     cur_dir = os.path.abspath(os.curdir)
     files = ordenar(os.listdir(cur_dir + '/' + directory))
     return [cv2.imread(directory + '/' + file, 0) for file in files]
 
 
+def load_color(directory):
+    """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el a color"""
+    cur_dir = os.path.abspath(os.curdir)
+    files = ordenar(os.listdir(cur_dir + '/' + directory))
+    return [cv2.imread(directory + '/' + file) for file in files]
+
+
 def soft_load():
+    """Devuelve una lista con 6 imagenes preseleccionadas aleatoriamente"""
     return [cv2.imread('train/frontal_9.jpg', 0), cv2.imread('train/frontal_39.jpg', 0),
             cv2.imread('train/frontal_43.jpg', 0), cv2.imread('train/frontal_7.jpg', 0),
             cv2.imread('train/frontal_19.jpg', 0), cv2.imread('train/frontal_26.jpg', 0)]
 
 
-"""Todas las imágenes de entreamiento (almacenadas en el directorio train) tienen el mismo tamaño y el frontal
-está cuadrado, por lo que el centro de todas las imágenes, y también el centro del frontal, se encontrará en el
-punto(225, 110), almacenado en la variable centre"""
-
-"""Definimos unos métodos para calcular el módulo del vector que une un punto p con el centro de la imágen y para
-calcular el ángulo que forma un punto p con el centro respecto del eje X en el sentido de las agujas del reloj"""
+def load2():
+    """Devuelve una lista con las 48 imagenes de entrenamiento"""
+    return [cv2.imread('train/frontal_' + str(i) + '.jpg', 0) for i in range(1, 49)]
 
 
-def calculate_module(p):
-    centre = (225, 110)
+def calculate_module(p, centre=(225, 110)):
+    """Recibe dos puntos y devuelve el modulo del vector que los une"""
     return np.sqrt((centre[0] - p[0]) ** 2 + (centre[1] - p[1]) ** 2)
 
 
-def calculate_angle_to_centre(p):
-    centre = (225, 110)
+def calculate_angle_to_centre(p, centre=(225, 110)):
+    """Recibe dos puntos y devuelve el angulo del vector que los une"""
     return (math.atan2((p[1] - centre[1]), (centre[0] - p[0])) * 180 / math.pi) % 360
-
-
-"""Más tarde va a ser necesario almacenar información sobre los puntos de interés (key points o kp), por lo que
-definimos una clase para ello"""
 
 
 class Match:
@@ -73,33 +64,32 @@ class Match:
         self.des_angle = des_angle
 
     def get_module(self):
+        """Devuelve el modulo del vector que une el punto de interes con el centro de la imagen"""
         return self.module
 
     def get_kp_angle(self):
+        """Devuelve el angulo del vector que une el punto de interes con el centro de la imagen"""
         return self.kp_angle
 
     def get_scale(self):
+        """Devuelve la escala del punto de interes"""
         return self.scale
 
     def get_des_angle(self):
+        """Devuelve el angulo del punto de interes respecto de la imagen"""
         return self.des_angle
 
 
 def train(images, detector):
-    """Usaremos una estructura de datos tipo FLANN para almacenar los descriptores"""
+    """Devuelve una tabla con los puntos de interes aprendidos y un arbol flann entrenado"""
     FLANN_INDEX_LSH = 6
     index_params = dict(algorithm=FLANN_INDEX_LSH, table_number=6, key_size=3, multi_probe_level=1)
     search_params = dict(checks=-1)
     flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-    """Almacenamos la información de los puntos de interés del entrenamiento en match_table"""
     match_table = []
-
-    # Bucle de entrenamiento
     for image in images:
         kps, des = detector.detectAndCompute(image, None)
-        # image_det = cv2.drawKeypoints(image, kps, None, color=(255,0,255),
-        #                               flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         image_match = [Match(calculate_module(k.pt), calculate_angle_to_centre(k.pt), k.size, k.angle) for k in kps]
         match_table.append(image_match)
         flann.add([des])
@@ -107,8 +97,9 @@ def train(images, detector):
     return match_table, flann
 
 
-def detect(images, detector, match_table, flann, KNN_MATCHES, GAUSSIAN_KERNEL_SIGMA, DEBUG):
-    if DEBUG == 1:
+def detect(images, detector, match_table, flann, knn_matches, sigma, debug):
+    """Devuelve una lista de tuplas con las coordenadas de los puntos detectados"""
+    if debug == 1:
         test_kps_table = []
         test_des_table = []
         matrices_votacion = []
@@ -116,22 +107,11 @@ def detect(images, detector, match_table, flann, KNN_MATCHES, GAUSSIAN_KERNEL_SI
 
     for test_image in images:
         kps, des = detector.detectAndCompute(test_image, None)
-        if DEBUG == 1:
+        if debug == 1:
             test_des_table.append(des)
             test_kps_table.append(kps)
-        # sh = cv2.drawKeypoints(test_image, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
-        results = flann.knnMatch(des, k=KNN_MATCHES)
-
-        """good = []
-        for r in results:
-            local = []
-            for i in range(len(r)-1):
-                m = r[i]
-                n = r[i+1]
-                if m.distance < 0.95 * n.distance:
-                    local.append(m)
-            good.append(local)"""
+        results = flann.knnMatch(des, k=knn_matches)
 
         matriz_votacion = np.zeros((int(test_image.shape[0] / 10), int(test_image.shape[1] / 10)), dtype=np.float32)
 
@@ -146,14 +126,12 @@ def detect(images, detector, match_table, flann, KNN_MATCHES, GAUSSIAN_KERNEL_SI
                 if 0 < x < matriz_votacion.shape[1] and 0 < y < matriz_votacion.shape[0]:
                     matriz_votacion[y, x] += 1
 
-        sigma = GAUSSIAN_KERNEL_SIGMA
         ksize = 6 * sigma + 1
-        gaussian_kernel_y = cv2.getGaussianKernel(ksize, sigma)
-        gaussian_kernel_x = gaussian_kernel_y.T
-        gaussian_kernel = gaussian_kernel_y * gaussian_kernel_x
-        matriz_filtrada = cv2.filter2D(matriz_votacion, -1, gaussian_kernel)
+        kernel_y = cv2.getGaussianKernel(ksize, sigma)
+        kernel_x = kernel_y.T
+        matriz_filtrada = cv2.sepFilter2D(matriz_votacion, -1, kernel_y, kernel_x)
 
-        if DEBUG == 1:
+        if debug == 1:
             matrices_votacion.append(matriz_filtrada)
 
         z = np.unravel_index(np.argmax(matriz_filtrada, axis=None), matriz_filtrada.shape)
@@ -164,32 +142,33 @@ def detect(images, detector, match_table, flann, KNN_MATCHES, GAUSSIAN_KERNEL_SI
 
 
 def draw_points(images, points):
-    # cv2.circle(test, (int(z[0]*10), int(z[1]*10)), 15, (255,0,0), thickness=10, lineType=8, shift=0)
+    """Dibuja un circulo en los puntos dados sobre las imagenes recibidas como parametro"""
     for index in range(len(images)):
         cv2.circle(images[index], points[index], 15, (255, 0, 0), thickness=10, lineType=8, shift=0)
-        plt.imshow(images[index])
+        plt.imshow(cv2.cvtColor(images[index], cv2.COLOR_RGB2BGR))
         plt.title("Imagen " + str(index + 1))
         plt.show()
 
 
-def main(NUM_KEYPOINTS, SCALE_FACTOR, PYRAMID_LEVELS, KNN_MATCHES, GAUSSIAN_KERNEL_SIGMA, DEBUG=0):
+def main(num_keypoints, scale_factor, pyramid_levels, knn_matches, gaussian_kernel_sigma, debug=0):
     train_images = load()
-    orb = cv2.ORB_create(nfeatures=NUM_KEYPOINTS, scaleFactor=SCALE_FACTOR, nlevels=PYRAMID_LEVELS)
+    orb = cv2.ORB_create(nfeatures=num_keypoints, scaleFactor=scale_factor, nlevels=pyramid_levels)
     match_table, flann = train(train_images, orb)
     test_images = load('test')
+    test_images_color = load_color('test')
     # para hacer deteccion de una imagen en concretro, pasar esta imagen en una lista del siguiente modo
     # test_images = [test_images[i]], donde i es el indice de la imagen a testear
-    detected_points = detect(test_images, orb, match_table, flann, KNN_MATCHES, GAUSSIAN_KERNEL_SIGMA, DEBUG)
-    draw_points(test_images, detected_points)
+    detected_points = detect(test_images, orb, match_table, flann, knn_matches, gaussian_kernel_sigma, debug)
+    draw_points(test_images_color, detected_points)
 
 
 if __name__ == "__main__":
-    NUM_KEYPOINTS = 500
+    NUM_KEYPOINTS = 100
     SCALE_FACTOR = 1.3
     PYRAMID_LEVELS = 4
-    KNN_MATCHES = 6
+    KNN_MATCHES = 3
     GAUSSIAN_KERNEL_SIGMA = 2
     DEBUG = 1
 
     # para ver las matrices de votacion, introducir el parametro DEBUG
-    main(NUM_KEYPOINTS, SCALE_FACTOR, PYRAMID_LEVELS, KNN_MATCHES, GAUSSIAN_KERNEL_SIGMA)
+    main(NUM_KEYPOINTS, SCALE_FACTOR, PYRAMID_LEVELS, KNN_MATCHES, GAUSSIAN_KERNEL_SIGMA, DEBUG)
