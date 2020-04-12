@@ -4,7 +4,6 @@ from matplotlib import pyplot as plt
 import numpy as np
 import sys
 import math
-import time
 
 assert (sys.version.startswith('3.7')), "No se esta usando la version 3.7 de Python. Version en uso: " + sys.version
 assert (cv2.__version__.startswith('4.2')), "No se esta usando la version 4.2 de OpenCV. Version en uso: " + cv2.__version__
@@ -22,6 +21,7 @@ def ordenar(lst):
 
 def load(directory='train'):
     """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el"""
+    # https://stackoverflow.com/questions/51520/how-to-get-an-absolute-file-path-in-python#51523
     cur_dir = os.path.abspath(os.curdir)
     files = ordenar(os.listdir(cur_dir + '/' + directory))
     return [cv2.imread(directory + '/' + file, 0) for file in files]
@@ -119,10 +119,10 @@ def detect(images, detector, match_table, flann, knn_matches, sigma, debug):
             for m in r:
                 match = match_table[m.imgIdx][m.trainIdx]
                 m_test = kps[m.queryIdx]
-                trns = (m_test.size / match.get_scale()) * match.get_module()
+                mod = (m_test.size / match.get_scale()) * match.get_module()
                 angle = match.get_kp_angle() + match.get_des_angle() - m_test.angle
-                x = int((m_test.pt[0] + (trns * math.cos(angle))) / 10)
-                y = int((m_test.pt[1] - (trns * math.sin(angle))) / 10)
+                x = int((m_test.pt[0] + (mod * math.cos(angle))) / 10)
+                y = int((m_test.pt[1] - (mod * math.sin(angle))) / 10)
                 if 0 < x < matriz_votacion.shape[1] and 0 < y < matriz_votacion.shape[0]:
                     matriz_votacion[y, x] += 1
 
@@ -134,6 +134,7 @@ def detect(images, detector, match_table, flann, knn_matches, sigma, debug):
         if debug == 1:
             matrices_votacion.append(matriz_filtrada)
 
+        # https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html
         z = np.unravel_index(np.argmax(matriz_filtrada, axis=None), matriz_filtrada.shape)
         q = (int(z[1] * 10), int(z[0] * 10))
         detected_points.append(q)
@@ -163,12 +164,12 @@ def main(num_keypoints, scale_factor, pyramid_levels, knn_matches, gaussian_kern
 
 
 if __name__ == "__main__":
-    NUM_KEYPOINTS = 100
+    NUM_KEYPOINTS = 300
     SCALE_FACTOR = 1.3
     PYRAMID_LEVELS = 4
-    KNN_MATCHES = 3
+    KNN_MATCHES = 4
     GAUSSIAN_KERNEL_SIGMA = 2
     DEBUG = 1
 
     # para ver las matrices de votacion, introducir el parametro DEBUG
-    main(NUM_KEYPOINTS, SCALE_FACTOR, PYRAMID_LEVELS, KNN_MATCHES, GAUSSIAN_KERNEL_SIGMA, DEBUG)
+    main(NUM_KEYPOINTS, SCALE_FACTOR, PYRAMID_LEVELS, KNN_MATCHES, GAUSSIAN_KERNEL_SIGMA)

@@ -2,63 +2,52 @@ import cv2
 import deteccion_orb as orbdet
 import deteccion_haar as haardet
 
+# https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_gui/py_video_display/py_video_display.html
+
 
 def haar_detection(video_source, scale_factor, min_neighbors):
+    """Devuelve una lista con los frames con los frontales y matriculas detectados en coches mediante haar"""
     coches_cascade = cv2.CascadeClassifier('haar_opencv_4.1-4.2/coches.xml')
     matricula_cascade = cv2.CascadeClassifier('haar_opencv_4.1-4.2/matriculas.xml')
 
     cap = cv2.VideoCapture(video_source)
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    width = int(cap.get(3))
-    height = int(cap.get(4))
-    out = cv2.VideoWriter('output_haar_' + video_source[:6] + '.avi', fourcc, 20.0, (width, height))
 
     gray_frames = []
     color_frames = []
 
     while cap.isOpened():
         ret, frame = cap.read()
-        if ret:
+        if ret == True:
             gray_frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
             color_frames.append(frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
         else:
             break
 
-    images = haardet.detect(gray_frames, color_frames, coches_cascade, matricula_cascade, scale_factor, min_neighbors)
-    for frame in images:
-        out.write(frame)
+    frames = haardet.detect(gray_frames, color_frames, coches_cascade, matricula_cascade, scale_factor, min_neighbors)
 
     cap.release()
-    out.release()
+    return frames
 
 
-def orb_detection(video_source, frame_ratio, num_keypoints, scale_factor, pyramid_levels, knn_matches,
+def orb_detection(video_source, frame_rate, num_keypoints, scale_factor, pyramid_levels, knn_matches,
                   gaussian_kernel_sigma, debug):
+    """Devuelve una lista con los frames con los centros de frontales detectados en coches mediante orb"""
     cap = cv2.VideoCapture(video_source)
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    width = int(cap.get(3))
-    height = int(cap.get(4))
-    cap = cv2.VideoCapture(video_source)
-    out = cv2.VideoWriter('output_orb_' + video_source[:6] + '.avi', fourcc, 20.0, (width, height))
 
     all_frames = []
     color_frames = []
     gray_frames = []
+    output_frames = []
     count = -1
 
-    while (cap.isOpened()):
+    while cap.isOpened():
         count += 1
         ret, frame = cap.read()
-        if ret:
+        if ret == True:
             all_frames.append(frame)
-            if count % frame_ratio == 0:
+            if count % frame_rate == 0:
                 color_frames.append(frame)
                 gray_frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
         else:
             break
 
@@ -71,38 +60,37 @@ def orb_detection(video_source, frame_ratio, num_keypoints, scale_factor, pyrami
     point = [0, 0]
     for i in range(len(all_frames)):
         count += 1
-        if count % frame_ratio == 0:
-            t = detected_points[int(i / frame_ratio)]
+        if count % frame_rate == 0:
+            t = detected_points[int(i / frame_rate)]
             point = [t[0], t[1]]
-            cv2.circle(color_frames[int(i / frame_ratio)], (point[0], point[1]), 5, (255, 0, 0), thickness=4,
+            cv2.circle(color_frames[int(i / frame_rate)], (point[0], point[1]), 5, (255, 0, 0), thickness=4,
                        lineType=8, shift=0)
-            out.write(color_frames[int(i / frame_ratio)])
-            # Display the resulting frame
-            cv2.imshow(video_source, color_frames[int(i / frame_ratio)])
 
-            # Press Q on keyboard to  exit
-            if cv2.waitKey(int(cap.get(5))) & 0xFF == ord('q'):
-                break
+            output_frames.append(color_frames[int(i / frame_rate)])
         else:
             cv2.circle(all_frames[i], (point[0], point[1]), 5, (255, 0, 0), thickness=4, lineType=8, shift=0)
-            out.write(all_frames[i])
-            # Display the resulting frame
-            cv2.imshow(video_source, all_frames[i])
+            output_frames.append(all_frames[i])
 
-            # Press Q on keyboard to  exit
-            if cv2.waitKey(int(cap.get(5))) & 0xFF == ord('q'):
-                break
-
-    # Release everything if job is finished
     cap.release()
-    out.release()
+    return output_frames
 
 
-def main(video_source, frame_ratio, num_keypoints, scale_factor, pyramid_levels, knn_matches, gaussian_kernel_sigma,
+def show(video_source, frames, fps):
+    # https: // www.geeksforgeeks.org/python-play-a-video-using-opencv/
+    for frame in frames:
+        cv2.imshow('output_' + video_source[:video_source.find('.')], frame)
+        if cv2.waitKey(fps) & 0xFF == ord('q'):
+            break
+
+
+def main(video_source, frame_rate, num_keypoints, scale_factor, pyramid_levels, knn_matches, gaussian_kernel_sigma,
          min_neighbors, debug=0):
-    haar_detection(video_source, scale_factor, min_neighbors)
-    orb_detection(video_source, frame_ratio, num_keypoints, scale_factor, pyramid_levels, knn_matches,
-                  gaussian_kernel_sigma, debug)
+    fps = int(cv2.VideoCapture(video_source).get(5)) * 2
+    haar_frames = haar_detection(video_source, scale_factor, min_neighbors)
+    orb_frames = orb_detection(video_source, frame_rate, num_keypoints, scale_factor, pyramid_levels, knn_matches,
+                               gaussian_kernel_sigma, debug)
+    show(video_source, haar_frames, fps)
+    show(video_source, orb_frames, fps)
 
 
 if __name__ == "__main__":
@@ -112,7 +100,8 @@ if __name__ == "__main__":
     PYRAMID_LEVELS = 4
     KNN_MATCHES = 6
     GAUSSIAN_KERNEL_SIGMA = 2
-    FRAME_RATIO = 10
+    FRAME_RATE = 10
     MIN_NEIGHBORS = 5
 
-    main(source, FRAME_RATIO, NUM_KEYPOINTS, SCALE_FACTOR, PYRAMID_LEVELS, KNN_MATCHES, GAUSSIAN_KERNEL_SIGMA, MIN_NEIGHBORS)
+    main(source, FRAME_RATE, NUM_KEYPOINTS, SCALE_FACTOR, PYRAMID_LEVELS, KNN_MATCHES, GAUSSIAN_KERNEL_SIGMA,
+         MIN_NEIGHBORS)
