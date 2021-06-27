@@ -43,4 +43,4 @@ el resultado sobre cada una de las imágenes o vídeos de test.
 
 ## 5. Implementación, descripción del código y resultados obtenidos
 
-Véase el documento *memoria.pdf*
+Véase el documento *memoria.ipynb*
