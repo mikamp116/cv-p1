@@ -2,6 +2,8 @@
 
 ## 0. Demo
 
+![cv-p1](https://user-images.githubusercontent.com/48054735/123549640-26a84800-d76a-11eb-83d0-1becc81ee748.gif)
+
 ## 1. Detección de coches mediante puntos de interés
 
 Este apartado consiste en la construcción de un sistema que permita la detección de la posición de un coche dentro de una
